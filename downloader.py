@@ -6,7 +6,7 @@ from tqdm import tqdm
 import socks
 import socket
 
-def download_clip(ytid, start_seconds, end_seconds, output_path, video_frame_rate=5, audio_sample_rate=16000):
+def download_clip(ytid, start_seconds, end_seconds, output_path, video_frame_rate=5, audio_sample_rate=16000, proxy_url=None):
     """
     Downloads a clip from a YouTube video within a specified time range.
 
@@ -17,6 +17,7 @@ def download_clip(ytid, start_seconds, end_seconds, output_path, video_frame_rat
     output_path (str): Directory where the output video will be saved.
     video_frame_rate (int): Frame rate of the output video in frames per second.
     audio_sample_rate (int): Sample rate of the output audio in Hz.
+    proxy_url (str): URL of the proxy to use for fetching the video.
 
     Returns:
     None
@@ -31,6 +32,9 @@ def download_clip(ytid, start_seconds, end_seconds, output_path, video_frame_rat
 
     # Construct the yt-dlp command to get the video and audio URLs
     command = ["yt-dlp", "--youtube-skip-dash-manifest", "-g", f"https://youtu.be/{ytid}"]
+    if proxy_url:
+        command += ["--proxy", proxy_url]
+
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
 
@@ -42,7 +46,6 @@ def download_clip(ytid, start_seconds, end_seconds, output_path, video_frame_rat
     if len(urls) != 2:
         raise Exception(f"Error fetching URLs for {ytid}: {urls}")
     
-    
     # Construct the ffmpeg command to download the clip
     ffmpeg_command = [
         "ffmpeg",
@@ -50,7 +53,6 @@ def download_clip(ytid, start_seconds, end_seconds, output_path, video_frame_rat
         "-i", urls[0],  # Video URL
         "-ss", start_time,
         "-i", urls[1],  # Audio URL
-        # "-r", str(video_frame_rate),  # Set video frame rate #!balu removing it as you might take inference not only from LlaVa but other also may be.
         "-ar", str(audio_sample_rate),  # Set audio sample rate
         "-ac", "1",  # Set audio channels to mono
         "-map", "0:v", "-map", "1:a",
@@ -79,7 +81,7 @@ def download_clips(df, output_path, error_path):
     # Wrap the dataframe iteration with tqdm to add a progress bar
     for i, row in tqdm(df.iterrows(), total=len(df), desc="Downloading Clips"):
         try:
-            download_clip(row['YTID'], row['start_seconds'], row['end_seconds'], output_path)
+            download_clip(row['YTID'], row['start_seconds'], row['end_seconds'], output_path, proxy_url="socks5://localhost:10800")
         except Exception as e:
             with open(error_path, 'a') as f:
                 f.write(f"ERROR: {e}\n")
