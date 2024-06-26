@@ -31,7 +31,7 @@ def download_clip(ytid, start_seconds, end_seconds, output_path, video_frame_rat
     duration = end_seconds - start_seconds
 
     # Construct the yt-dlp command to get the video and audio URLs
-    command = ["yt-dlp", "--youtube-skip-dash-manifest", "-g", f"https://youtu.be/{ytid}"]
+    command = ["yt-dlp","-i", "--youtube-skip-dash-manifest", "-g", f"https://youtu.be/{ytid}"]
     if proxy_url:
         command += ["--proxy", proxy_url]
 
@@ -44,7 +44,8 @@ def download_clip(ytid, start_seconds, end_seconds, output_path, video_frame_rat
     # Decode the output and split by newlines to get separate URLs
     urls = output.decode("utf-8").strip().split("\n")
     if len(urls) != 2:
-        raise Exception(f"Error fetching URLs for {ytid}: {urls}")
+        # raise Exception(f"Error fetching URLs for {ytid}: {urls}")
+        urls = [urls[0], urls[0]]
     
     # Construct the ffmpeg command to download the clip
     ffmpeg_command = [
@@ -81,16 +82,17 @@ def download_clips(df, output_path, error_path):
     # Wrap the dataframe iteration with tqdm to add a progress bar
     for i, row in tqdm(df.iterrows(), total=len(df), desc="Downloading Clips"):
         try:
-            download_clip(row['YTID'], row['start_seconds'], row['end_seconds'], output_path, proxy_url="socks5://localhost:10800")
+            download_clip(row['YTID'], row['start_seconds'], row['end_seconds'], output_path)
         except Exception as e:
             with open(error_path, 'a') as f:
                 f.write(f"ERROR: {e}\n")
 
 def main(l_idx, u_idx,split):
-    csv_path = f"/disk1/audioset/annotations/audioset_{split}_strong.csv"
-    output_path = f"/disk1/audioset/{split}/videos"
-    if split == 'eval':
-        error_path = f"/disk1/audioset/{split}/download_logs/error.log"
+    # csv_path = f"/disk1/audioset/annotations/audioset_{split}_strong.csv"
+    csv_path = f"/disk1/audioset/annotations/missing_files_{split}.csv"
+    output_path = f"/disk1/audioset/{split}_missing/videos"
+    if split == 'eval' or True:
+        error_path = f"/disk1/audioset/{split}_missing/download_logs/error.log"
     else:
         error_path = f"/disk1/audioset/{split}/download_logs/error_{l_idx}_{u_idx}.log"
     os.makedirs(output_path, exist_ok=True)
@@ -105,5 +107,5 @@ if __name__ == "__main__":
     parser.add_argument('--split', type=str, help='split', default='eval')
     args = parser.parse_args()
     # Set up the local SOCKS proxy
-    setup_socks_proxy()
+    # setup_socks_proxy()
     main(args.l_idx, args.u_idx, args.split)
