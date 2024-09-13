@@ -5,6 +5,7 @@ import argparse
 from tqdm import tqdm
 import socks
 import socket
+import json
 
 def download_clip(ytid, start_seconds, end_seconds, output_path, video_frame_rate=5, audio_sample_rate=16000, proxy_url=None):
     """
@@ -23,9 +24,7 @@ def download_clip(ytid, start_seconds, end_seconds, output_path, video_frame_rat
     None
     """
     # Sanitize the YouTube ID to remove any unsafe characters for filenames
-    ytid_strip = ''.join(e for e in ytid if e.isalnum())
-    if os.path.exists(f"{output_path}/{ytid_strip}.mp4"):
-        return
+    # ytid_strip = ''.join(e for e in ytid if e.isalnum())
     # Convert start and end times to HH:MM:SS format
     start_time = f"{int(start_seconds // 3600):02d}:{int((start_seconds % 3600) // 60):02d}:{int(start_seconds % 60):02d}"
     duration = end_seconds - start_seconds
@@ -59,7 +58,7 @@ def download_clip(ytid, start_seconds, end_seconds, output_path, video_frame_rat
         "-map", "0:v", "-map", "1:a",
         "-c:v", "libx264", "-c:a", "aac",
         "-t", str(duration),
-        f"{output_path}/{ytid_strip}.mp4"
+        f"{output_path}/{ytid}.mp4"
     ]
 
     process = subprocess.run(ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -73,37 +72,44 @@ def read_csv(csv_path, l_idx, u_idx):
     return df
 
 
-def setup_socks_proxy(proxy_host='localhost', proxy_port=1080):
-    # Set up a local SOCKS proxy
-    socks.set_default_proxy(socks.SOCKS5, proxy_host, proxy_port)
-    socket.socket = socks.socksocket
 
-def download_clips(df, output_path, error_path):
-    # Wrap the dataframe iteration with tqdm to add a progress bar
+def download_clips(df, output_path, error_path, video_files, videos_list_file_path):
+    # filter out rows that are already downloaded and in video_files
+    print(f"Total rows: {len(df)}")
+    df = df[~df['YTID'].isin(video_files)]
+    print(f"Total rows after filtering: {len(df)}")
+    print(f"Downloading {len(df)} clips to {output_path}")
     for i, row in tqdm(df.iterrows(), total=len(df), desc="Downloading Clips"):
         try:
-            download_clip(row['YTID'], row['start_seconds'], row['end_seconds'], output_path)
+            download_clip(row['YTID'], row['start_time'], row['end_time'], output_path) # proxy_url="socks5://163.53.204.178:9813")
+            print(f"Downloaded {row['YTID']}")
         except Exception as e:
             with open(error_path, 'a') as f:
+                print(f"ERROR: {e}")
                 f.write(f"ERROR: {e}\n")
+        if i % 500 == 0:
+            with open(videos_list_file_path, 'w') as f:
+                json.dump(os.listdir(output_path), f)
 
 def main(l_idx, u_idx,split):
-    # csv_path = f"/disk1/audioset/annotations/audioset_{split}_strong.csv"
-    csv_path = f"/disk1/audioset/annotations/missing_files_{split}.csv"
-    output_path = f"/disk1/audioset/{split}_missing/videos"
-    if split == 'eval' or True:
-        error_path = f"/disk1/audioset/{split}_missing/download_logs/error.log"
-    else:
-        error_path = f"/disk1/audioset/{split}/download_logs/error_{l_idx}_{u_idx}.log"
+    csv_path = f"/home/bld56/gsoc/general/download_logs/ytid_to_label_download_{split}_v3.csv"
+    output_path = f"/tmp/bld56_dataset_v1/audioset/{split}/videos"
+    error_path = f"/tmp/bld56_dataset_v1/audioset/{split}/download_logs/error_v3.log"
+    videos_list_file_path = f"/home/bld56/gsoc/general/temps/gput.json"
+    current_videos_list = json.load(open(videos_list_file_path, 'r'))
+    current_videos_list = [f.replace('.mp4', '') for f in current_videos_list]
+    print(current_videos_list[:10])
+    # make dirs recursively if not exist
+    subprocess.run(["mkdir", "-p", output_path])
     os.makedirs(output_path, exist_ok=True)
     os.makedirs(os.path.dirname(error_path), exist_ok=True)
     df = read_csv(csv_path, l_idx, u_idx)
-    download_clips(df, output_path, error_path)
+    download_clips(df, output_path, error_path, current_videos_list, videos_list_file_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Download clips from YouTube videos.')
-    parser.add_argument('--l_idx', type=int, help='lower index', default=0)
-    parser.add_argument('--u_idx', type=int, help='upper index', default=10000)
+    parser.add_argument('--l_idx', type=int, help='lower index', required=True)
+    parser.add_argument('--u_idx', type=int, help='upper index', required=True)
     parser.add_argument('--split', type=str, help='split', default='eval')
     args = parser.parse_args()
     # Set up the local SOCKS proxy

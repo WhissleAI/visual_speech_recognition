@@ -97,13 +97,13 @@ def main(mixing_ratio, numsamples):
     
     # Normalize mixing_ratio to a two-digit format for consistency in directory naming
     mixing_ratio_str = f"{mixing_ratio:.2f}".replace('.', '')
-    mixed_output_base_dir = f'/disk1/get_wer/mixed_dataset_{mixing_ratio_str}/'
+    mixed_output_base_dir = f'/tmp/bld56_dataset_v1/get_wer/mixed_dataset_{mixing_ratio_str}/'
     time_and_date_string, logs_base_dir = setup_logging(mixed_output_base_dir)
 
     config = {
-        'base_dir_as_videos': '/disk1/audioset/train/videos',
-        'base_dir_ps': '/disk1/peoples_speech/',
-        'base_dir_as': '/disk1/audioset/',
+        'base_dir_as_videos': '/tmp/bld56_dataset_v1/audioset/train/videos',
+        'base_dir_ps': '/tmp/bld56_dataset_v1/peoples_speech/',
+        'base_dir_as': '/tmp/bld56_dataset_v1/audioset/',
         'ctm_file_base_dir': '/workspace/dataset/validation/',
         'as_samples_json': 'annotations/it1_audioset_anns_final_train.json',
         'mixed_output_base_dir': mixed_output_base_dir,

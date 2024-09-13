@@ -51,8 +51,8 @@ def merge_and_get_wer(model, ratio, num_samples):
     # subprocess.run(["python", "/workspace/gsoc/mixer_new.py", f"--mix_ratio={ratio}", f"--num_samples={num_samples}"])
     # main(ratio, num_samples)
     mixing_ratio_str = f"{ratio:.2f}".replace('.', '')
-    ann_file = os.listdir(f"/disk1/get_wer/mixed_dataset_{mixing_ratio_str}/annotations/")[0]
-    wer = get_wer(model, f"/disk1/get_wer/mixed_dataset_{mixing_ratio_str}/annotations/{ann_file}")
+    ann_file = os.listdir(f"/tmp/bld56_dataset_v1/get_wer/mixed_dataset_{mixing_ratio_str}/annotations/")[0]
+    wer = get_wer(model, f"/tmp/bld56_dataset_v1/get_wer/mixed_dataset_{mixing_ratio_str}/annotations/{ann_file}")
     return wer
     
     
@@ -77,5 +77,5 @@ def merge_and_get_wer(model, ratio, num_samples):
 #         with open(output_file, 'w') as f:
 #             json.dump(ratio_to_wer, f)
 
-get_wer(load_model("stt_en_conformer_ctc_large"), "/disk1/it1_20/annotations/manifest_eval.json")
+get_wer(load_model("stt_en_conformer_ctc_large"), "/tmp/bld56_dataset_v1/it1_20/annotations/manifest_eval.json")
         
